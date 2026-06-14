@@ -49,7 +49,7 @@ defmodule Solid.StandardFilter do
     if is_function(mod_or_callback, 2) do
       mod_or_callback.(func, args)
     else
-      func = String.to_existing_atom(func)
+      func = existing_function!(mod_or_callback, func)
       {:ok, Kernel.apply(mod_or_callback, func, args)}
     end
   rescue
@@ -63,6 +63,23 @@ defmodule Solid.StandardFilter do
 
     UndefinedFunctionError ->
       find_correct_function(mod_or_callback, String.to_existing_atom(func), Enum.count(args), loc)
+  end
+
+  # Look up the filter's function atom among the module's exported functions
+  # instead of String.to_existing_atom/1, which raised flaky ArgumentErrors when
+  # the filter module's function-name atom had not been loaded yet.
+  defp existing_function!(module, func) do
+    exported_functions = module.__info__(:functions)
+
+    function =
+      Enum.find_value(exported_functions, fn {name, _arity} ->
+        if to_string(name) == func, do: name
+      end)
+
+    case function do
+      nil -> raise ArgumentError
+      name -> name
+    end
   end
 
   @doc """
