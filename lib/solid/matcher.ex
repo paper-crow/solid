@@ -95,4 +95,9 @@ defimpl Solid.Matcher, for: Tuple do
       ArgumentError -> {:error, :not_found}
     end
   end
+
+  # String (or other non-integer) keys: soft-miss like List/Any. Without this,
+  # `{% for kv in some_map %}{{ kv.field }}{% endfor %}` raises FunctionClauseError
+  # because Enum over a map yields `{key, value}` tuples.
+  def match(_data, _), do: {:error, :not_found}
 end
